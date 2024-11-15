@@ -84,6 +84,9 @@ void arena_free(ArenaAllocator* arena) {
         free(cursor);
         cursor = arena->head;
     }
+
+    arena->head = NULL;
+    arena->blockNum = arena->blockSize = 0;
 }
 
 void* arena_malloc(ArenaAllocator* arena, size_t size) {
