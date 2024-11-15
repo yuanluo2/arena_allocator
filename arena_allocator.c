@@ -22,7 +22,7 @@ typedef struct ArenaAllocator ArenaAllocator;
     consider it as a new block, and reuse it in case 1 or case 2.
 */
 #define ARENA_FLAG_ONLY_ONE      0
-#define ARENA_FLAG_MULTI_PARTS  1
+#define ARENA_FLAG_MULTI_PARTS   1
 #define ARENA_FLAG_NO_USE        2
 
 struct ArenaBlockHeader {
