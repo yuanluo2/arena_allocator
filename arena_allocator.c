@@ -1,15 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef unsigned char Boolean;
-typedef unsigned char ArenaFlag;
-typedef struct ArenaBlockHeader ArenaBlockHeader;
-typedef struct ArenaAllocator ArenaAllocator;
+typedef unsigned char            ArenaFlag;
+typedef struct ArenaBlockHeader  ArenaBlockHeader;
+typedef struct ArenaAllocator    ArenaAllocator;
 
 #define ARENA_ENABLE_DEBUG 1
-
-#define b_False 0
-#define b_True  1
 
 /*
     when allocate a block, it can only be those 3 status:
@@ -38,6 +34,49 @@ struct ArenaAllocator {
     size_t blockNum;
 };
 
+ArenaAllocator* arena_create(size_t blockSize) {
+    ArenaAllocator* arena = (ArenaAllocator*)malloc(sizeof(ArenaAllocator));
+
+    if (arena == NULL) {
+        return NULL;
+    }
+
+    arena->head = (ArenaBlockHeader*)malloc(sizeof(ArenaBlockHeader) + blockSize);
+    if (arena->head == NULL) {
+        free(arena);
+        return NULL;
+    }
+
+    arena->blockSize = blockSize;
+    arena->head->capacity = blockSize;
+    arena->head->flag = ARENA_FLAG_NO_USE;
+    arena->head->used = 0;
+    arena->head->next = NULL;
+    arena->blockNum = 1;
+
+    #if ARENA_ENABLE_DEBUG
+    printf("default block size is %d\n\n", blockSize);
+    #endif
+
+    return arena;
+}
+
+void arena_free(ArenaAllocator* arena) {
+    ArenaBlockHeader* cursor;
+
+    if (arena != NULL) {
+        cursor = arena->head;
+
+        while (cursor != NULL) {
+            arena->head = cursor->next;
+            free(cursor);
+            cursor = arena->head;
+        }
+
+        free(arena);
+    }
+}
+
 ArenaBlockHeader* arena_create_new_block(ArenaAllocator* arena, size_t size, size_t used, ArenaFlag flag) {
     ArenaBlockHeader* newBlock = (ArenaBlockHeader*)malloc(sizeof(ArenaBlockHeader) + size);
     
@@ -52,41 +91,6 @@ ArenaBlockHeader* arena_create_new_block(ArenaAllocator* arena, size_t size, siz
     }
 
     return newBlock;
-}
-
-Boolean arena_init(ArenaAllocator* arena, size_t blockSize) {
-    arena->blockSize = blockSize;
-    arena->head = (ArenaBlockHeader*)malloc(sizeof(ArenaBlockHeader) + blockSize);
-    
-    if (arena->head == NULL) {
-        return b_False;
-    }
-
-    arena->head->capacity = blockSize;
-    arena->head->flag = ARENA_FLAG_NO_USE;
-    arena->head->used = 0;
-    arena->head->next = NULL;
-    arena->blockNum = 1;
-
-    #if ARENA_ENABLE_DEBUG
-    printf("default block size is %d\n\n", blockSize);
-    #endif
-
-    return b_True;
-}
-
-void arena_free(ArenaAllocator* arena) {
-    ArenaBlockHeader* cursor = arena->head;
-    arena->blockNum = 0;
-
-    while (cursor != NULL) {
-        arena->head = cursor->next;
-        free(cursor);
-        cursor = arena->head;
-    }
-
-    arena->head = NULL;
-    arena->blockNum = arena->blockSize = 0;
 }
 
 void* arena_malloc(ArenaAllocator* arena, size_t size) {
@@ -146,19 +150,17 @@ void arena_recycle(void* memory) {
 }
 
 int main() {
-    ArenaAllocator arena;
     void* test_for_recycle;
+    ArenaAllocator* arena = arena_create(12);
 
-    arena_init(&arena, 12);
-
-    arena_malloc(&arena, 2);
-    test_for_recycle = arena_malloc(&arena, 13);
-    arena_malloc(&arena, 4);
-    arena_malloc(&arena, 6);
-    arena_malloc(&arena, 7);
-    arena_malloc(&arena, 14);
+    arena_malloc(arena, 2);
+    test_for_recycle = arena_malloc(arena, 13);
+    arena_malloc(arena, 4);
+    arena_malloc(arena, 6);
+    arena_malloc(arena, 7);
+    arena_malloc(arena, 14);
     arena_recycle(test_for_recycle);
-    arena_malloc(&arena, 13);
+    arena_malloc(arena, 13);
 
     /*
         default block size is 12
@@ -173,5 +175,5 @@ int main() {
         want 13, find a block which has enough space, use it
     */
 
-    arena_free(&arena);
+    arena_free(arena);
 }
