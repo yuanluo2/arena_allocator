@@ -137,9 +137,13 @@ void* arena_malloc(ArenaAllocator* arena, size_t size) {
     return newBlock != NULL ? (void*)(newBlock + 1) : NULL;
 }
 
-void arena_recycle(void* memory) {
+/*
+    try to recycle memory allocated by arena allocator.
+*/
+void arena_recycle(ArenaAllocator* arena, void* memory, size_t capacity) {
     ArenaBlockHeader* header = (ArenaBlockHeader*)memory - 1;
-    if (header->flag == ARENA_FLAG_ONLY_ONE) {
+
+    if (capacity >= arena->blockSize && header->flag == ARENA_FLAG_ONLY_ONE) {
         header->flag = ARENA_FLAG_NO_USE;
         header->used = 0;
 
@@ -159,7 +163,7 @@ int main() {
     arena_malloc(arena, 6);
     arena_malloc(arena, 7);
     arena_malloc(arena, 14);
-    arena_recycle(test_for_recycle);
+    arena_recycle(arena, test_for_recycle, 13);
     arena_malloc(arena, 13);
 
     /*
